@@ -10,7 +10,13 @@ export const patientRepository = {
 
         if (error) throw error;
         return {
-            documents: data.map(doc => ({ ...doc, $id: doc.id })),
+            documents: data.map(doc => ({
+                ...doc,
+                $id: doc.id,
+                medicalNotes: doc.medical_notes,
+                lastVisitDate: doc.last_visit_date,
+                createdAt: doc.created_at
+            })),
             total: data.length
         };
     },
@@ -23,33 +29,66 @@ export const patientRepository = {
             .single();
 
         if (error) throw error;
-        return { ...data, $id: data.id };
+        return {
+            ...data,
+            $id: data.id,
+            medicalNotes: data.medical_notes,
+            lastVisitDate: data.last_visit_date,
+            createdAt: data.created_at
+        };
     },
 
     async create(data: Omit<Patient, "$id" | "createdAt">) {
         const { data: doc, error } = await supabase
             .from('patients')
             .insert({
-                ...data,
+                name: data.name,
+                phone: data.phone,
+                age: data.age,
+                gender: data.gender,
+                address: data.address,
+                medical_notes: data.medicalNotes,
                 created_at: new Date().toISOString()
             })
             .select()
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            medicalNotes: doc.medical_notes,
+            lastVisitDate: doc.last_visit_date,
+            createdAt: doc.created_at
+        };
     },
 
     async update(id: string, data: Partial<Omit<Patient, "$id" | "createdAt">>) {
+        const updateData: any = { ...data };
+        if (data.medicalNotes !== undefined) {
+            updateData.medical_notes = data.medicalNotes;
+            delete updateData.medicalNotes;
+        }
+        if (data.lastVisitDate !== undefined) {
+            updateData.last_visit_date = data.lastVisitDate;
+            delete updateData.lastVisitDate;
+        }
+
         const { data: doc, error } = await supabase
             .from('patients')
-            .update(data)
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            medicalNotes: doc.medical_notes,
+            lastVisitDate: doc.last_visit_date,
+            createdAt: doc.created_at
+        };
     },
 
     async search(query: string) {
@@ -60,7 +99,13 @@ export const patientRepository = {
 
         if (error) throw error;
         return {
-            documents: data.map(doc => ({ ...doc, $id: doc.id })),
+            documents: data.map(doc => ({
+                ...doc,
+                $id: doc.id,
+                medicalNotes: doc.medical_notes,
+                lastVisitDate: doc.last_visit_date,
+                createdAt: doc.created_at
+            })),
             total: data.length
         };
     },
@@ -73,6 +118,12 @@ export const patientRepository = {
             .limit(limit);
 
         if (error) throw error;
-        return data.map(doc => ({ ...doc, $id: doc.id }));
+        return data.map(doc => ({
+            ...doc,
+            $id: doc.id,
+            medicalNotes: doc.medical_notes,
+            lastVisitDate: doc.last_visit_date,
+            createdAt: doc.created_at
+        }));
     }
 };

@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appointmentRepository } from "@/repositories/appointment";
 import { patientRepository } from "@/repositories/patient";
+import { BookAppointmentDialog } from "./book-appointment-dialog";
 import {
     Table,
     TableBody,
@@ -31,7 +32,7 @@ export default function AppointmentsPage() {
 
     const { data: appointments, isLoading: isApptsLoading } = useQuery({
         queryKey: ["appointments", selectedDate],
-        queryFn: () => appointmentRepository.getAll([`equal("date", "${selectedDate}")`]),
+        queryFn: () => appointmentRepository.getAll(selectedDate),
     });
 
     const { data: patients } = useQuery({
@@ -70,9 +71,7 @@ export default function AppointmentsPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Appointments</h1>
                     <p className="text-slate-500">Manage daily schedule and bookings</p>
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="mr-2 h-4 w-4" /> Book Appointment
-                </Button>
+                <BookAppointmentDialog />
             </div>
 
             <div className="flex items-center gap-4 bg-white p-4 rounded-lg border shadow-sm">

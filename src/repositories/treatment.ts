@@ -11,7 +11,14 @@ export const treatmentRepository = {
 
         if (error) throw error;
         return {
-            documents: data.map(doc => ({ ...doc, $id: doc.id })),
+            documents: data.map(doc => ({
+                ...doc,
+                $id: doc.id,
+                patientId: doc.patient_id,
+                doctorId: doc.doctor_id,
+                visitDate: doc.visit_date,
+                toothNumbers: doc.tooth_numbers
+            })),
             total: data.length
         };
     },
@@ -33,18 +40,38 @@ export const treatmentRepository = {
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            patientId: doc.patient_id,
+            doctorId: doc.doctor_id,
+            visitDate: doc.visit_date,
+            toothNumbers: doc.tooth_numbers
+        };
     },
 
     async update(id: string, data: Partial<Omit<Treatment, "$id">>) {
+        const updateData: any = { ...data };
+        if (data.patientId) { updateData.patient_id = data.patientId; delete updateData.patientId; }
+        if (data.doctorId) { updateData.doctor_id = data.doctorId; delete updateData.doctorId; }
+        if (data.visitDate) { updateData.visit_date = data.visitDate; delete updateData.visitDate; }
+        if (data.toothNumbers) { updateData.tooth_numbers = data.toothNumbers; delete updateData.toothNumbers; }
+
         const { data: doc, error } = await supabase
             .from('treatments')
-            .update(data)
+            .update(updateData)
             .eq('id', id)
             .select()
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            patientId: doc.patient_id,
+            doctorId: doc.doctor_id,
+            visitDate: doc.visit_date,
+            toothNumbers: doc.tooth_numbers
+        };
     },
 };

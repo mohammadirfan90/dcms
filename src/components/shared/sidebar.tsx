@@ -11,22 +11,30 @@ import {
     Users,
     Calendar,
     CreditCard,
+    Settings,
     BarChart3,
     LogOut,
-    Stethoscope
+    FileText
 } from "lucide-react";
+import { UserRole } from "@/models";
 
-const navItems = [
-    { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
-    { label: "Patients", icon: Users, href: "/patients" },
-    { label: "Appointments", icon: Calendar, href: "/appointments" },
-    { label: "Billing", icon: CreditCard, href: "/billing" },
-    { label: "Reports", icon: BarChart3, href: "/reports" },
+const navItems: { label: string; icon: any; href: string; roles: UserRole[] }[] = [
+    { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard", roles: ["admin", "doctor", "receptionist"] },
+    { label: "Patients", icon: Users, href: "/patients", roles: ["admin", "doctor", "receptionist"] },
+    { label: "Appointments", icon: Calendar, href: "/appointments", roles: ["admin", "doctor", "receptionist"] },
+    { label: "Prescriptions", icon: FileText, href: "/prescriptions", roles: ["admin", "doctor"] },
+    { label: "Billing", icon: CreditCard, href: "/billing", roles: ["admin", "doctor", "receptionist"] },
+    { label: "Settings", icon: Settings, href: "/settings", roles: ["admin", "doctor"] },
+    { label: "Reports", icon: BarChart3, href: "/reports", roles: ["admin"] },
 ];
 
-export function Sidebar() {
+export function Sidebar({ onNavItemClick, className }: { onNavItemClick?: () => void; className?: string }) {
     const pathname = usePathname();
     const { user, refreshUser } = useAuth();
+
+    const filteredNavItems = navItems.filter(item =>
+        user && item.roles.includes(user.role)
+    );
 
     const handleLogout = async () => {
         await authRepository.logout();
@@ -34,19 +42,19 @@ export function Sidebar() {
     };
 
     return (
-        <div className="flex h-screen w-64 flex-col border-r bg-white">
+        <div className={cn("flex h-screen w-64 flex-col border-r bg-white shrink-0", className)}>
             <div className="flex h-16 items-center px-6 border-b">
-                <Stethoscope className="h-6 w-6 text-blue-600 mr-2" />
-                <span className="text-xl font-bold text-slate-900">Antigravity DCMS</span>
+                <img src="/dental-home-icon-transparent.png" alt="Dental Home Icon" className="h-8 w-8 mr-2 object-contain" />
+                <span className="text-xl font-black tracking-tight text-slate-900">Dental Home</span>
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 px-4 space-y-2">
-                {navItems.map((item) => (
-                    <Link key={item.href} href={item.href}>
+                {filteredNavItems.map((item) => (
+                    <Link key={item.href} href={item.href} onClick={onNavItemClick}>
                         <Button
                             variant="ghost"
                             className={cn(
-                                "w-full justify-start text-slate-600 hover:text-blue-600 hover:bg-blue-50",
+                                "w-full justify-start text-slate-600 hover:text-blue-600 hover:bg-blue-50 h-11 md:h-9",
                                 pathname.startsWith(item.href) && "bg-blue-50 text-blue-600 font-medium"
                             )}
                         >

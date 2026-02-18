@@ -3,6 +3,10 @@
 import { Sidebar } from "@/components/shared/sidebar";
 import { useAuth } from "@/providers/auth-provider";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Menu, Stethoscope } from "lucide-react";
+import { useState } from "react";
 
 export default function DashboardLayout({
     children,
@@ -10,6 +14,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const { isLoading, user } = useAuth();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     if (isLoading || !user) {
         return (
@@ -24,10 +29,30 @@ export default function DashboardLayout({
     }
 
     return (
-        <div className="flex h-screen bg-slate-50 overflow-hidden">
-            <Sidebar />
-            <main className="flex-1 overflow-y-auto">
-                <div className="mx-auto max-w-7xl p-8">
+        <div className="flex h-screen bg-slate-50 overflow-hidden flex-col md:flex-row">
+            {/* Mobile Header */}
+            <header className="flex h-16 items-center justify-between px-6 border-b bg-white md:hidden shrink-0">
+                <div className="flex items-center">
+                    <img src="/dental-home-icon-transparent.png" alt="Dental Home" className="h-8 w-8 mr-2 object-contain" />
+                    <span className="text-xl font-black tracking-tight text-slate-900">Dental Home</span>
+                </div>
+                <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                    <SheetTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <Menu className="h-6 w-6" />
+                        </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="p-0 w-64">
+                        <Sidebar className="h-full w-full border-none" onNavItemClick={() => setIsMobileMenuOpen(false)} />
+                    </SheetContent>
+                </Sheet>
+            </header>
+
+            {/* Sidebar - Restored to original behavior for desktop */}
+            <Sidebar className="hidden md:flex" />
+
+            <main className="flex-1 overflow-y-auto w-full">
+                <div className="mx-auto max-w-7xl p-4 md:p-8">
                     {children}
                 </div>
             </main>

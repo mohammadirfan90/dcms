@@ -2,14 +2,38 @@ import { supabase } from "@/lib/supabase";
 import { Appointment, AppointmentStatus } from "@/models";
 
 export const appointmentRepository = {
-    async getAll() {
-        const { data, error } = await supabase
+    async getAll(date?: string | string[]) {
+        let query = supabase
             .from('appointments')
             .select('*, patients(*)');
 
+        if (date) {
+            let dateStr = "";
+            if (Array.isArray(date) && date.length > 0) {
+                // Handle different array formats including equal("date", "...")
+                const match = date[0].match(/"([^"]+)"$/) || date[0].match(/"([^"]+)"\)$/);
+                dateStr = match ? match[1] : date[0];
+            } else if (typeof date === 'string') {
+                dateStr = date;
+            }
+
+            if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                query = query.eq('date', dateStr);
+            }
+        }
+
+        const { data, error } = await query.order('time_slot');
+
         if (error) throw error;
         return {
-            documents: data.map(doc => ({ ...doc, $id: doc.id })),
+            documents: data.map(doc => ({
+                ...doc,
+                $id: doc.id,
+                patientId: doc.patient_id,
+                doctorId: doc.doctor_id,
+                timeSlot: doc.time_slot,
+                patient: doc.patients ? { ...doc.patients, $id: doc.patients.id } : null
+            })),
             total: data.length
         };
     },
@@ -42,7 +66,13 @@ export const appointmentRepository = {
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            patientId: doc.patient_id,
+            doctorId: doc.doctor_id,
+            timeSlot: doc.time_slot
+        };
     },
 
     async updateStatus(id: string, status: AppointmentStatus) {
@@ -54,7 +84,13 @@ export const appointmentRepository = {
             .single();
 
         if (error) throw error;
-        return { ...doc, $id: doc.id };
+        return {
+            ...doc,
+            $id: doc.id,
+            patientId: doc.patient_id,
+            doctorId: doc.doctor_id,
+            timeSlot: doc.time_slot
+        };
     },
 
     async getTodayAppointments(doctorId?: string) {
@@ -72,7 +108,14 @@ export const appointmentRepository = {
         if (error) throw error;
 
         return {
-            documents: data.map(doc => ({ ...doc, $id: doc.id })),
+            documents: data.map(doc => ({
+                ...doc,
+                $id: doc.id,
+                patientId: doc.patient_id,
+                doctorId: doc.doctor_id,
+                timeSlot: doc.time_slot,
+                patient: doc.patients ? { ...doc.patients, $id: doc.patients.id } : null
+            })),
             total: data.length
         };
     }

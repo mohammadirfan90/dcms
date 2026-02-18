@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { treatmentRepository } from "@/repositories/treatment";
+import { profileRepository } from "@/repositories/profile";
+import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,13 @@ import {
     DialogTitle,
     DialogTrigger
 } from "@/components/ui/dialog";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
@@ -27,11 +36,18 @@ interface AddTreatmentDialogProps {
 export function AddTreatmentDialog({ patientId }: AddTreatmentDialogProps) {
     const [open, setOpen] = useState(false);
     const queryClient = useQueryClient();
+    const { user } = useAuth();
     const [toothInput, setToothInput] = useState("");
+
+    const { data: doctors } = useQuery({
+        queryKey: ["doctors", "list"],
+        queryFn: () => profileRepository.getDoctors(),
+        enabled: open
+    });
 
     const [formData, setFormData] = useState({
         patientId: patientId,
-        doctorId: "doctor1", // Default for MVP
+        doctorId: "",
         visitDate: new Date().toISOString().split("T")[0],
         complaint: "",
         diagnosis: "",
@@ -39,6 +55,15 @@ export function AddTreatmentDialog({ patientId }: AddTreatmentDialogProps) {
         toothNumbers: [] as string[],
         notes: "",
     });
+
+    // Auto-fill doctorId
+    useEffect(() => {
+        if (user?.role === 'doctor') {
+            setFormData(prev => ({ ...prev, doctorId: user.$id }));
+        } else if (doctors?.documents.length && !formData.doctorId) {
+            setFormData(prev => ({ ...prev, doctorId: doctors.documents[0].$id }));
+        }
+    }, [user, doctors, formData.doctorId]);
 
     const createMutation = useMutation({
         mutationFn: (data: any) => treatmentRepository.create(data),
@@ -48,7 +73,7 @@ export function AddTreatmentDialog({ patientId }: AddTreatmentDialogProps) {
             setOpen(false);
             setFormData({
                 patientId: patientId,
-                doctorId: "doctor1",
+                doctorId: user?.role === 'doctor' ? user.$id : (doctors?.documents[0]?.$id || ""),
                 visitDate: new Date().toISOString().split("T")[0],
                 complaint: "",
                 diagnosis: "",
@@ -81,8 +106,8 @@ export function AddTreatmentDialog({ patientId }: AddTreatmentDialogProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.procedure || !formData.diagnosis) {
-            toast.error("Procedure and Diagnosis are required");
+        if (!formData.procedure || !formData.diagnosis || !formData.doctorId) {
+            toast.error("Procedure, Diagnosis, and Doctor are required");
             return;
         }
         createMutation.mutate(formData);
@@ -103,89 +128,107 @@ export function AddTreatmentDialog({ patientId }: AddTreatmentDialogProps) {
                             Record diagnosis and procedures performed during this visit.
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="date" className="text-right">Visit Date</Label>
+                    <div className="grid gap-6 py-6 px-1">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="date" className="text-sm font-medium">Visit Date</Label>
                             <Input
                                 id="date"
                                 type="date"
                                 required
-                                className="col-span-3"
+                                className="h-11"
                                 value={formData.visitDate}
                                 onChange={(e) => setFormData({ ...formData, visitDate: e.target.value })}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="complaint" className="text-right mt-2">Complaint</Label>
+
+                        {user?.role !== 'doctor' && (
+                            <div className="flex flex-col gap-2">
+                                <Label htmlFor="doctor" className="text-sm font-medium">Doctor*</Label>
+                                <Select
+                                    value={formData.doctorId}
+                                    onValueChange={(val) => setFormData({ ...formData, doctorId: val })}
+                                >
+                                    <SelectTrigger className="h-11">
+                                        <SelectValue placeholder="Select Doctor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {doctors?.documents.map((d: any) => (
+                                            <SelectItem key={d.$id} value={d.$id}>Dr. {d.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="complaint" className="text-sm font-medium">Complaint</Label>
                             <Textarea
                                 id="complaint"
-                                className="col-span-3"
+                                className="min-h-[80px]"
                                 placeholder="Patient's primary complaint"
                                 value={formData.complaint}
                                 onChange={(e) => setFormData({ ...formData, complaint: e.target.value })}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="diagnosis" className="text-right mt-2">Diagnosis*</Label>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="diagnosis" className="text-sm font-medium">Diagnosis*</Label>
                             <Textarea
                                 id="diagnosis"
                                 required
-                                className="col-span-3"
+                                className="min-h-[80px]"
                                 value={formData.diagnosis}
                                 onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="procedure" className="text-right">Procedure*</Label>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="procedure" className="text-sm font-medium">Procedure*</Label>
                             <Input
                                 id="procedure"
                                 required
-                                className="col-span-3"
+                                className="h-11"
                                 placeholder="e.g. Filling, Root Canal"
                                 value={formData.procedure}
                                 onChange={(e) => setFormData({ ...formData, procedure: e.target.value })}
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right">Teeth</Label>
-                            <div className="col-span-3 flex gap-2 overflow-hidden">
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-sm font-medium">Teeth</Label>
+                            <div className="flex gap-2">
                                 <Input
                                     placeholder="No."
-                                    className="w-20"
+                                    className="h-11 w-24"
                                     value={toothInput}
                                     onChange={(e) => setToothInput(e.target.value)}
                                     onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTooth())}
                                 />
-                                <Button type="button" variant="outline" size="sm" onClick={addTooth}>Add</Button>
+                                <Button type="button" variant="outline" className="h-11" onClick={addTooth}>Add</Button>
                             </div>
-                        </div>
-                        {formData.toothNumbers.length > 0 && (
-                            <div className="grid grid-cols-4 gap-4">
-                                <div className="col-start-2 col-span-3 flex flex-wrap gap-2">
+                            {formData.toothNumbers.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
                                     {formData.toothNumbers.map(t => (
-                                        <Badge key={t} variant="secondary" className="pl-2 pr-1 py-1">
+                                        <Badge key={t} variant="secondary" className="pl-3 pr-2 py-1.5 text-sm">
                                             {t}
-                                            <button type="button" onClick={() => removeTooth(t)} className="ml-1 hover:text-red-500">
-                                                <X className="h-3 w-3" />
+                                            <button type="button" onClick={() => removeTooth(t)} className="ml-2 hover:text-red-500">
+                                                <X className="h-3.5 w-3.5" />
                                             </button>
                                         </Badge>
                                     ))}
                                 </div>
-                            </div>
-                        )}
-                        <div className="grid grid-cols-4 items-start gap-4">
-                            <Label htmlFor="notes" className="text-right mt-2">Notes</Label>
+                            )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
                             <Textarea
                                 id="notes"
-                                className="col-span-3"
+                                className="min-h-[80px]"
                                 value={formData.notes}
                                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={createMutation.isPending}>
+                    <DialogFooter className="gap-3 sm:gap-2">
+                        <Button type="button" variant="outline" className="h-11 sm:h-9" onClick={() => setOpen(false)}>Cancel</Button>
+                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700 h-11 sm:h-9" disabled={createMutation.isPending}>
                             {createMutation.isPending ? "Saving..." : "Save Record"}
                         </Button>
                     </DialogFooter>
