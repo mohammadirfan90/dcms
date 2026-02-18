@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { settingsRepository } from "@/repositories/settings";
 import { profileRepository } from "@/repositories/profile";
@@ -20,7 +20,13 @@ export default function SettingsPage() {
         queryFn: () => settingsRepository.getSettings()
     });
 
-    const [doctors, setDoctors] = useState<ClinicDoctor[]>(settings?.doctors || []);
+    const [doctors, setDoctors] = useState<ClinicDoctor[]>([]);
+
+    useEffect(() => {
+        if (settings?.doctors) {
+            setDoctors(settings.doctors);
+        }
+    }, [settings]);
 
     const updateMutation = useMutation({
         mutationFn: (data: any) => settingsRepository.updateSettings(data),
@@ -122,10 +128,6 @@ export default function SettingsPage() {
                         </Button>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        {(doctors.length === 0 && (settings?.doctors?.length || 0) > 0) ? (
-                            // Initial load hook
-                            setDoctors(settings?.doctors || [])
-                        ) : null}
 
                         {doctors.map((doc, idx) => (
                             <div key={doc.id} className="p-4 border rounded-lg relative space-y-3 bg-slate-50/50">
